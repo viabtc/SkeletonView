@@ -11,6 +11,9 @@ import UIKit
 enum CollectionAssociatedKeys {
     static var dummyDataSource = "dummyDataSource"
     static var dummyDelegate = "dummyDelegate"
+    static var kOldScrollEnabled =             "kOldScrollEnabled"
+    static var kSetScrollEnabled =             "kSetScrollEnabled"
+    
 }
 
 protocol CollectionSkeleton {
@@ -29,6 +32,30 @@ protocol CollectionSkeleton {
 
 extension CollectionSkeleton where Self: UIScrollView {
     
+    var isOldScrollEnabled: Bool {
+        get {
+            if let enabled = objc_getAssociatedObject(self, &CollectionAssociatedKeys.kOldScrollEnabled) as? Bool {
+                return enabled
+            }
+            return true
+        }
+        set {
+            objc_setAssociatedObject(self, &CollectionAssociatedKeys.kOldScrollEnabled, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    var isSetScrollEnabled: Bool {
+        get {
+            if let enabled = objc_getAssociatedObject(self, &CollectionAssociatedKeys.kSetScrollEnabled) as? Bool {
+                return enabled
+            }
+            return false
+        }
+        set {
+            objc_setAssociatedObject(self, &CollectionAssociatedKeys.kSetScrollEnabled, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
     var estimatedNumberOfRows: Int { return 0 }
     func addDummyDataSource() {}
     func removeDummyDataSource(reloadAfter: Bool) {}
@@ -36,15 +63,28 @@ extension CollectionSkeleton where Self: UIScrollView {
     func disableUserInteraction() {
         if isUserInteractionDisabledWhenSkeletonIsActive {
             isUserInteractionEnabled = false
-            isScrollEnabled = false
+            if isSetScrollEnabled {
+                isScrollEnabled = self.isOldScrollEnabled
+            } else {
+                isSetScrollEnabled = true
+                isOldScrollEnabled = isScrollEnabled
+                isScrollEnabled = false
+            }
         }
     }
     
     func enableUserInteraction() {
         if isUserInteractionDisabledWhenSkeletonIsActive {
             isUserInteractionEnabled = true
-            isScrollEnabled = true
+            if isSetScrollEnabled {
+                isScrollEnabled = self.isOldScrollEnabled
+            } else {
+                isSetScrollEnabled = true
+                isOldScrollEnabled = isScrollEnabled
+                isScrollEnabled = true
+            }
         }
     }
     
 }
+
